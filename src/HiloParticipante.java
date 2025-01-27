@@ -8,8 +8,8 @@ public class HiloParticipante implements Runnable{
     private DataOutputStream dataOut;
     private DataInputStream dataIn;
     private GestorSubasta gestorSubasta;
-    public HiloParticipante(Socket socket, ObjectOutputStream objectOut, ObjectInputStream objectIn,
-                            DataOutputStream dataOut, DataInputStream dataIn, GestorSubasta gs){
+    public HiloParticipante(Socket socket, ObjectOutputStream objectOut, ObjectInputStream objectIn, DataOutputStream dataOut,
+                            DataInputStream dataIn, GestorSubasta gs){
         this.socket = socket;
         this.objectOut = objectOut;
         this.objectIn = objectIn;
@@ -47,13 +47,8 @@ public class HiloParticipante implements Runnable{
                             Oferta ofertaCliente = (Oferta) objectIn.readObject();
                             if ((gestorSubasta.getSubasta().getOfertaMayor() == null && ofertaCliente.getMonto() >= gestorSubasta.getSubasta().getArticulo().getPrecioBase()) ||
                                     (gestorSubasta.getSubasta().getOfertaMayor() != null && ofertaCliente.getMonto() >= gestorSubasta.getSubasta().getOfertaMayor().getMonto())) {
-                                gestorSubasta.getSubasta().setOfertaMayor(ofertaCliente);
-                                gestorSubasta.finalizarTemporizador();
-                                gestorSubasta.setTiempoRestante(gestorSubasta.getSubasta().getTiempo());
-                                gestorSubasta.iniciarTemporizador();
-                                System.out.println("Actualizacion realizada, nueva oferta mayor: " + gestorSubasta.getSubasta().getOfertaMayor().getMonto());
-                                gestorSubasta.enviarMensajeIndividual("Oferta recibida correctamente. Actualmente tu oferta es la mayor", objectOut);
-                                gestorSubasta.enviarActualizacionGlobal(3);
+                                fijarOfertaMayor(ofertaCliente);
+                                System.out.println("Actualizacion nueva oferta mayor en la subasta: " + gestorSubasta.getCodigoSubasta() + "\nOferta: " + gestorSubasta.getSubasta().getOfertaMayor().getMonto());
                             } else if(gestorSubasta.getSubasta().getOfertaMayor() == null && gestorSubasta.getSubasta().getArticulo().getPrecioBase() > ofertaCliente.getMonto()) {
                                 gestorSubasta.enviarMensajeIndividual("Oferta rechazada. La oferta realizada no supera el precio base", objectOut);
                             }else{
@@ -62,14 +57,14 @@ public class HiloParticipante implements Runnable{
                         }
                         break;
                     case 2:
+                        manejarDesconexionParticipante();
                         break;
                     default:
                         gestorSubasta.enviarMensajeIndividual("Debes ingresar una opción valida", objectOut);
                 }
             }catch (IOException e){
-                System.out.println("El cliente se ha desconectado: " + socket.getInetAddress());
-                manejarDesconexionParticipante();
-                break; // Salir del metodo run
+                System.out.println("Se ha cerrado la conexion con el cliente: " + socket.getInetAddress() + " de la subasta " + gestorSubasta.getCodigoSubasta());
+                break;
             }catch (Exception e){
                 e.printStackTrace();
             }
@@ -82,8 +77,15 @@ public class HiloParticipante implements Runnable{
             socket.close();
             System.out.println("Recursos liberados para el cliente desconectado.");
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("Error al manejar la desconexion del participante: " + e.getMessage());
         }
+    }
+
+    private void fijarOfertaMayor(Oferta ofertaCliente){
+        gestorSubasta.getSubasta().setOfertaMayor(ofertaCliente);
+        gestorSubasta.reiniciarTemporizador();
+        gestorSubasta.enviarMensajeIndividual("Oferta recibida correctamente. Actualmente tu oferta es la mayor", objectOut);
+        gestorSubasta.enviarActualizacionGlobal(3);
     }
 }
 

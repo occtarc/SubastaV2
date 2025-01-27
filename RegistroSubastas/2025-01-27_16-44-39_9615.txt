@@ -1,0 +1,13 @@
+Subasta del día: 27/01/2025 16:44:39
+Subastador: 
+Nombre: Jose
+Email: papa 
+Artículo: 
+Nombre: Remera 
+Descripcion: verde 
+Precio Base: $200,00
+Ganador de la subasta: 
+Participante:
+Nombre: PIPA 
+Email: BENEDETTO
+Oferta mayor: 700.0

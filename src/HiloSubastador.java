@@ -2,15 +2,15 @@ import java.io.*;
 import java.net.Socket;
 
 public class HiloSubastador implements Runnable{
-    private Socket socket;
+    public Socket socket;
     private ObjectOutputStream objectOut;
     private ObjectInputStream objectIn;
     private DataOutputStream dataOut;
     private DataInputStream dataIn;
     private GestorSubasta gestorSubasta;
 
-    public HiloSubastador(Socket socket, ObjectOutputStream objectOut, ObjectInputStream objectIn,
-                          DataOutputStream dataOut, DataInputStream dataIn, GestorSubasta gs){
+    public HiloSubastador(Socket socket, ObjectOutputStream objectOut, ObjectInputStream objectIn, DataOutputStream dataOut,
+                           DataInputStream dataIn, GestorSubasta gs){
         this.socket = socket;
         this.objectOut = objectOut;
         this.objectIn = objectIn;
@@ -26,21 +26,18 @@ public class HiloSubastador implements Runnable{
         while(true){
             try{
                 opcion = dataIn.readInt();
+                System.out.println(opcion);
                 switch (opcion){
                     case 1:
                         if(gestorSubasta.isSubastaActiva()){
-                            gestorSubasta.enviarMensajeIndividual("Ya hay una subasta en curso, debes esperar a que finalice", objectOut);
+                            gestorSubasta.enviarMensajeIndividual("Ya hay una subasta en curso, no puedes iniciar otra.", objectOut);
                         }else{
                             if(gestorSubasta.getParticipantesConectados() < 2){
                                 gestorSubasta.enviarMensajeIndividual("Debes esperar a que se conecten al menos 2 participantes para iniciar la subasta", objectOut);
                             }else{
                             Subasta subasta =(Subasta)objectIn.readObject();
-                            gestorSubasta.setSubasta(subasta);
-                            gestorSubasta.setSubastaActiva(true);
-                            gestorSubasta.iniciarTemporizador();
+                            iniciarSubasta(subasta);
                             System.out.println("Subasta con codigo " + gestorSubasta.getCodigoSubasta() + " iniciada correctamente");
-                            gestorSubasta.enviarMensajeIndividual("Subasta iniciada correctamente", objectOut);
-                            gestorSubasta.enviarActualizacionGlobal(1);
                             }
                         }
                         break;
@@ -50,11 +47,11 @@ public class HiloSubastador implements Runnable{
                         gestorSubasta.enviarMensajeIndividual("Debes ingresar una opción valida", objectOut);
                 }
             }catch (IOException e){
-                System.out.println("El cliente se ha desconectado: " + socket.getInetAddress());
+                e.getMessage();
                 manejarDesconexionSubastador();
                 break;
             }catch (Exception e){
-                e.printStackTrace();
+                e.getMessage();
             }
         }
     }
@@ -64,12 +61,20 @@ public class HiloSubastador implements Runnable{
             gestorSubasta.eliminarCliente(objectOut);
             socket.close();
             gestorSubasta.setSubastaActiva(false);
-            System.out.println("El subastador se ha desconectado.");
+            System.out.println("El subastador de la subasta " + gestorSubasta.getCodigoSubasta() + " se ha desconectado.");
             gestorSubasta.finalizarTemporizador();
             gestorSubasta.enviarActualizacionGlobal(5);
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("Error al manejar la desconexion del subastador: " + e.getMessage());
         }
+    }
+
+    private void iniciarSubasta(Subasta subasta){
+        gestorSubasta.setSubasta(subasta);
+        gestorSubasta.setSubastaActiva(true);
+        gestorSubasta.iniciarTemporizador();
+        gestorSubasta.enviarMensajeIndividual("Subasta iniciada correctamente",objectOut);
+        gestorSubasta.enviarActualizacionGlobal(1);
     }
 }
 

@@ -1,6 +1,7 @@
 import java.io.*;
 import java.net.Socket;
 import java.net.SocketException;
+import java.sql.SQLOutput;
 import java.util.Scanner;
 
 public class Cliente {
@@ -11,6 +12,7 @@ public class Cliente {
     private static boolean participantesMinimos = false;
     private static boolean subastaActiva;
     private static boolean participanteConectado = false;
+    private static  boolean escuchando = true;
 
     public Cliente(){}
 
@@ -29,9 +31,9 @@ public class Cliente {
 
             new Thread(()->{
                 try{
-                    while(true){
+                    while(escuchando){
                         Object mensaje = objectIn.readObject();
-                        System.out.println("\n[Notificacion del servidor]: " + mensaje);
+                        System.out.println("[Notificacion del servidor]: " + mensaje);
                         if(mensaje instanceof String){
                             String msg = (String) mensaje;
                             if(msg.contains("Ya hay una subasta activa") || msg.contains("Se ha iniciado una subasta") || msg.contains("Hay una subasta en curso")){
@@ -43,12 +45,12 @@ public class Cliente {
                                participanteConectado = true;
                             }else if(msg.contains("Ya hay 2 participantes conectados")){
                                 participantesMinimos = true;
+                            }else if(msg.contains("El subastador se ha desconectado")){
+                                System.exit(0);
                             }
                         }
                     }
-                }catch (EOFException | SocketException e){
-                    System.exit(0);
-                }catch(Exception e){
+                }catch (Exception e){
                     e.printStackTrace();
                 }
             }).start();
@@ -56,12 +58,12 @@ public class Cliente {
             if(Cliente.usuario.getRol() == Rol.SUBASTADOR){
                 Subastador subastador = (Subastador)Cliente.usuario;
                 while(true){
-                    Thread.sleep(5);
+                    Thread.sleep(100);
                     System.out.println("1- Iniciar una subasta");
                     System.out.println("2- Salir del sistema");
+                    System.out.print("> ");
                     opcion = scanner.nextInt();
                     dataOut.writeInt(opcion);
-
                     switch (opcion){
                         case 1:
                             if(!subastaActiva && participantesMinimos){
@@ -79,14 +81,16 @@ public class Cliente {
                 int codigo;
                 System.out.println("Ingresa el codigo de la subasta a la cual te deseas conectar");
                 do{
+                    System.out.print("> ");
                     codigo = scanner.nextInt();
                     dataOut.writeInt(codigo);
                     Thread.sleep(50);
                 }while(!participanteConectado);
                 while(true){
-                    Thread.sleep(5);
+                    Thread.sleep(100);
                     System.out.println("1- Realizar una oferta");
                     System.out.println("2- Salir del sistema");
+                    System.out.print("> ");
                     opcion = scanner.nextInt();
                     dataOut.writeInt(opcion);
                     switch (opcion){
@@ -138,10 +142,13 @@ public class Cliente {
 
     public static void desconexion(){
         try {
+            escuchando = false;
             if (socket != null) socket.close();
-            System.exit(0);
+            System.out.println("Conexion finalizada correctamente");
         } catch (IOException e) {
             e.printStackTrace();
+        }finally {
+            System.exit(0);
         }
     }
     public static Usuario getUsuario(){return usuario;}

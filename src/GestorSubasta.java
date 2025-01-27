@@ -35,7 +35,7 @@ public class GestorSubasta {
         try {
             objOut.writeObject(mensaje);
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("Error al enviar mensaje individual: " + e.getMessage());
         }
 
     }
@@ -68,7 +68,7 @@ public class GestorSubasta {
                 mensaje = "Quedan 10 segundos para que finalice la subasta!";
                 break;
             case 5:
-                mensaje = "Subastador desconectado! Fin de la subasta.";
+                mensaje = "El subastador se ha desconectado. La subasta queda cancelada.";
                 break;
         }
 
@@ -78,7 +78,7 @@ public class GestorSubasta {
                     objOut.writeObject(mensaje);
                     objOut.flush();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    System.err.println("Error al enviar mensaje global: " + e.getMessage());
                 }
             }
         }
@@ -132,29 +132,46 @@ public class GestorSubasta {
                     enviarActualizacionGlobal(4);
                 }
                 if(tiempoRestante == 0){
-                    subastaActiva = false;
-                    enviarActualizacionGlobal(2);
-                    temporizador.cancel();
-                    System.out.println("Subasta finalizada.");
-                    Servidor.eliminarSubasta(getCodigoSubasta());
-                    for(ObjectOutputStream cliente : clientesConectados){
-                        try {
-                            cliente.close();
-                            conexionSubastador.close();
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
+                    finalizarSubasta();
                 }else{
                     tiempoRestante--;
-                    System.out.println("Quedan " + tiempoRestante + " segundos");
                 }
             }
         },0,1000);
     }
 
+
+
+    public void finalizarSubasta(){
+        temporizador.cancel();
+        subastaActiva = false;
+        System.out.println("Subasta numero " + getCodigoSubasta() + " finalizada");
+        enviarActualizacionGlobal(2);
+        cerrarConexiones();
+        Servidor.eliminarSubasta(getCodigoSubasta());
+    }
+
+    private void cerrarConexiones(){
+        try {
+            for (ObjectOutputStream cliente : clientesConectados) {
+                cliente.writeObject("Conexion finalizada.");
+                cliente.close();
+            }
+            conexionSubastador.close();
+        } catch (IOException e) {
+            System.err.println("Error al cerrar conexiones: " + e.getMessage());
+        }
+    }
+
+
     public void finalizarTemporizador(){
         temporizador.cancel();
+    }
+
+    public void reiniciarTemporizador(){
+        temporizador.cancel();
+        tiempoRestante = getSubasta().getTiempo();
+        iniciarTemporizador();
     }
 
     public boolean isSubastaActiva() {
