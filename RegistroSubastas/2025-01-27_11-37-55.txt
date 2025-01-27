@@ -1,0 +1,13 @@
+Subasta del día: 27/01/2025 11:37:55
+Subastador: 
+Nombre: Reme
+Email: ra 
+Artículo: 
+Nombre: Renera 
+Descripcion: verde 
+Precio Base: $200,00
+Ganador de la subasta: 
+Participante:
+Nombre: pa 
+Email: ro
+Oferta mayor: 800.0
